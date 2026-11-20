@@ -1,0 +1,48 @@
+(function (root) {
+  const S = root.Story;
+  const NAMES = ['glitch', 'drift', 'copy', 'notes', 'toasts', 'address'];
+  const tracker = S.visitor.createTracker(() => root.performance.now());
+  const snapshot = () => tracker.snapshot({ w: root.innerWidth, h: root.innerHeight });
+  let queued = false;
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  // One read per frame. Everything shown is a pure function of current progress, never of scroll history,
+  // so jumping, reloading mid-page, resizing and scrolling back up all land in the right state.
+  function render() {
+    queued = false;
+    const de = document.documentElement;
+    const progress = S.engine.progressFrom(root.scrollY, de.scrollHeight, root.innerHeight);
+    const { act, local } = S.engine.resolveAct(progress);
+    const ctx = { act, local, progress, snapshot };
+    de.dataset.act = act.id;
+    for (const name of NAMES) {
+      const fx = S.effects[name];
+      if (!fx) continue;
+      const cfg = act.effects[name];
+      try {
+        if (cfg === undefined) { fx.reset(); continue; }
+        fx.apply(Array.isArray(cfg) ? lerp(cfg[0], cfg[1], local) : cfg, ctx);
+      } catch (err) {
+        // One broken effect must not take the others (or the page) down with it.
+        console.error('effect failed:', name, err);
+      }
+    }
+  }
+
+  function onScroll() {
+    tracker.onScroll(root.scrollY); // sampled on every event so speed is real, not frame-gated
+    request();
+  }
+
+  function request() {
+    if (queued) return;
+    queued = true;
+    root.requestAnimationFrame(render);
+  }
+
+  root.addEventListener('scroll', onScroll, { passive: true });
+  root.addEventListener('resize', request);
+  root.addEventListener('load', request);
+  request();
+})(window);

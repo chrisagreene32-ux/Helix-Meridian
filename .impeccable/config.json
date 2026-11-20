@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "index.html"
+        ],
+        "createdAt": "2026-11-20T20:49:51.839Z",
+        "reason": "assistant decided: detector flags the bg-2 sections (games, press) as having no inset, but content is padded 24px (phone) to ~144px (desktop); verified in screenshots and a padding shorthand change did not alter the finding"
+      }
+    ]
+  }
+}
