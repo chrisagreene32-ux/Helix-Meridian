@@ -133,6 +133,52 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await context.close();
 }
 
+// ---- Task 5: direct address ----
+for (const [name, vp] of Object.entries(VIEWPORTS)) {
+  const { context, page, errors } = await open(browser, vp);
+  const tag = `[${name}]`;
+
+  await seek(page, 0.5);
+  check(`${tag} p=0.50 address hidden`, (await count(page, '#address.is-on')) === 0);
+
+  await seek(page, 0.90);
+  const dark = await page.evaluate(() => {
+    const el = document.querySelector('#address');
+    const cs = getComputedStyle(el);
+    return { on: el.classList.contains('is-on'), bg: cs.backgroundColor, opacity: parseFloat(cs.opacity) };
+  });
+  check(`${tag} p=0.90 page is near-black`, dark.on && dark.bg === 'rgb(0, 0, 0)' && dark.opacity >= 0.9, JSON.stringify(dark));
+  check(`${tag} p=0.90 first line is showing`, (await count(page, '#address p.is-shown')) >= 1);
+
+  await seek(page, 1);
+  const addr = await text(page, '#address');
+  check(`${tag} p=1.0 names the real viewport`, addr.includes(`${vp.width} by ${vp.height}`), addr);
+  check(`${tag} p=1.0 final line pinned on screen`, await page.evaluate(() => {
+    const ps = [...document.querySelectorAll('#address p')];
+    const last = ps[ps.length - 1];
+    const r = last.getBoundingClientRect();
+    return last.classList.contains('is-shown') && r.top >= 0 && r.bottom <= window.innerHeight;
+  }));
+
+  // Scrolling back up is noticed, once it has happened.
+  await seek(page, 0.5);
+  await seek(page, 1);
+  check(`${tag} scrolling back up is acknowledged`, (await text(page, '#address')).includes('scrolled back up'));
+  await seek(page, 0.5);
+  check(`${tag} back at p=0.50 address hidden again`, (await count(page, '#address.is-on')) === 0);
+
+  // A fresh visitor who jumps straight to the end still gets the address.
+  const fresh = await open(browser, vp);
+  await seek(fresh.page, 1);
+  check(`${tag} instant jump to bottom renders the address`, (await text(fresh.page, '#address')).includes(' by '));
+  check(`${tag} direct-address pass: no console errors`, errors.length === 0 && fresh.errors.length === 0, errors.concat(fresh.errors).join(' | '));
+  await page.screenshot({ path: path.join(outDir, `act5-${name}.png`) });
+  await seek(fresh.page, 1);
+  await fresh.page.screenshot({ path: path.join(outDir, `act5-final-${name}.png`) });
+  await fresh.context.close();
+  await context.close();
+}
+
 await browser.close();
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

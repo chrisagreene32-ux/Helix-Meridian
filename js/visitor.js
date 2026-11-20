@@ -5,15 +5,17 @@
   const BACK_SCROLL_PX = 200;
 
   function createTracker(now) {
+    // Speed is distance travelled since page load (starting from the top), so a single
+    // instant jump to the bottom reads as fast instead of as "no measurable scrolling".
     const born = now();
-    let firstT = null, lastT = 0, lastY = 0, distance = 0;
+    let scrolled = false, lastT = born, lastY = 0, distance = 0;
     let mode = 'down', extreme = 0, backScrolls = 0;
 
     return {
       onScroll(y) {
         const t = now();
-        if (firstT === null) { firstT = t; extreme = y; }
-        else distance += Math.abs(y - lastY);
+        scrolled = true;
+        distance += Math.abs(y - lastY);
         lastT = t; lastY = y;
 
         if (mode === 'down') {
@@ -25,8 +27,8 @@
         }
       },
       snapshot(viewport) {
-        const elapsed = firstT === null ? 0 : (lastT - firstT) / 1000;
-        const avgSpeed = elapsed > 0 ? distance / elapsed : 0;
+        const elapsed = Math.max((lastT - born) / 1000, 0.05);
+        const avgSpeed = scrolled ? distance / elapsed : 0;
         return {
           seconds: Math.floor((now() - born) / 1000),
           avgSpeed,

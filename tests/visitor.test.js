@@ -29,6 +29,21 @@ test('slow scroll: 300px in 10s is not fast', () => {
   assert.equal(tr.snapshot(VP).fast, false);
 });
 
+test('a single instant jump to the bottom counts as fast, not slow', () => {
+  const now = clock();
+  const tr = visitor.createTracker(now);
+  now.set(200);
+  tr.onScroll(5000);
+  assert.equal(tr.snapshot(VP).fast, true);
+});
+
+test('a visitor who never scrolls is not fast', () => {
+  const now = clock();
+  const tr = visitor.createTracker(now);
+  now.set(30000);
+  assert.equal(tr.snapshot(VP).fast, false);
+});
+
 test('down 500 then up 300 counts one back-scroll', () => {
   const now = clock();
   const tr = visitor.createTracker(now);

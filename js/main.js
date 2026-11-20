@@ -1,6 +1,8 @@
 (function (root) {
   const S = root.Story;
-  const NAMES = ['glitch', 'drift', 'copy', 'notes', 'toasts'];
+  const NAMES = ['glitch', 'drift', 'copy', 'notes', 'toasts', 'address'];
+  const tracker = S.visitor.createTracker(() => root.performance.now());
+  const snapshot = () => tracker.snapshot({ w: root.innerWidth, h: root.innerHeight });
   let queued = false;
 
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -12,7 +14,7 @@
     const de = document.documentElement;
     const progress = S.engine.progressFrom(root.scrollY, de.scrollHeight, root.innerHeight);
     const { act, local } = S.engine.resolveAct(progress);
-    const ctx = { act, local, progress };
+    const ctx = { act, local, progress, snapshot };
     for (const name of NAMES) {
       const fx = S.effects[name];
       if (!fx) continue;
@@ -22,13 +24,18 @@
     }
   }
 
+  function onScroll() {
+    tracker.onScroll(root.scrollY); // sampled on every event so speed is real, not frame-gated
+    request();
+  }
+
   function request() {
     if (queued) return;
     queued = true;
     root.requestAnimationFrame(render);
   }
 
-  root.addEventListener('scroll', request, { passive: true });
+  root.addEventListener('scroll', onScroll, { passive: true });
   root.addEventListener('resize', request);
   root.addEventListener('load', request);
   request();

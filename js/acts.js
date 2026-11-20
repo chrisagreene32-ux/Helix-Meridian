@@ -10,7 +10,7 @@
     { id: 'cracks',      start: 0.25, end: 0.45, effects: { glitch: [0.03, 0.12], drift: [0.04, 0.14], copy: 1, notes: 1 } },
     { id: 'frustration', start: 0.45, end: 0.65, effects: { glitch: [0.12, 0.35], drift: [0.14, 0.40], copy: 1, notes: 1 } },
     { id: 'contempt',    start: 0.65, end: 0.85, effects: { glitch: [0.35, 0.80], drift: [0.40, 1.00], copy: 1, notes: 1, toasts: 1 } },
-    { id: 'address',     start: 0.85, end: 1.00, effects: {} }
+    { id: 'address',     start: 0.85, end: 1.00, effects: { glitch: [0.80, 1.00], drift: 1, copy: 1, notes: 1, address: 1 } }
   ];
 
   // Margin notes: the AI designer's comments, left in the file. `at` is absolute scroll progress;

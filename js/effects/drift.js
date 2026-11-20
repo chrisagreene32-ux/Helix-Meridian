@@ -34,8 +34,9 @@
     apply(intensity, ctx) {
       seed();
       const contempt = ctx.act.id === 'contempt';
-      set(Math.round(intensity * 1000) / 1000, contempt ? Math.round(ctx.local * 1000) / 1000 : 0);
-      setInverted(contempt && ctx.local > 0.35);
+      const late = contempt || ctx.act.id === 'address';
+      set(Math.round(intensity * 1000) / 1000, contempt ? Math.round(ctx.local * 1000) / 1000 : late ? 1 : 0);
+      setInverted(late && (!contempt || ctx.local > 0.35));
     },
     reset() { set(0, 0); setInverted(false); }
   };

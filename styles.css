@@ -287,6 +287,25 @@ section { position: relative; padding-block: var(--section); }
 .toast strong { display: block; color: #ff3b4e; margin-bottom: 0.15rem; }
 .toast p { color: var(--fg); max-width: none; }
 
+/* Direct address: the site goes dark and the designer speaks. */
+.address {
+  position: fixed; inset: 0; z-index: 80;
+  display: none; align-items: center;
+  padding: var(--space) max(var(--space), calc((100% - 40rem) / 2));
+  background: #000; opacity: var(--dread);
+  pointer-events: none;
+}
+.address.is-on { display: flex; }
+.address__lines { display: grid; gap: 1.1rem; }
+.address p {
+  max-width: 34ch; color: var(--fg);
+  font-size: clamp(1.2rem, 3.4vw, 1.75rem); line-height: 1.4;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+.address p.is-shown { opacity: 0.45; transform: none; }
+.address p.is-current { opacity: 1; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 52rem) {
   .grid, .games__grid, .press__grid { display: block; }
