@@ -54,6 +54,85 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await context.close();
 }
 
+// ---- helpers for scroll-driven checks ----
+async function seek(page, p) {
+  await page.evaluate((p) => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    window.scrollTo({ top: p * max, behavior: 'instant' });
+  }, p);
+  await page.waitForTimeout(150);
+}
+const count = (page, sel) => page.locator(sel).count();
+const cssVar = (page, name) =>
+  page.evaluate((n) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(n)) || 0, name);
+const text = (page, sel) => page.locator(sel).first().innerText();
+
+// ---- Task 4: effects for acts 2-4 ----
+for (const [name, vp] of Object.entries(VIEWPORTS)) {
+  const { context, page, errors } = await open(browser, vp);
+  const tag = `[${name}]`;
+  const lede0 = await text(page, '.hero__lede');
+  const showcase0 = await text(page, '#showcase h2');
+  const footer0 = await text(page, '.footer__links');
+
+  await seek(page, 0.10);
+  check(`${tag} p=0.10 no notes`, (await count(page, '.note.is-on')) === 0);
+  check(`${tag} p=0.10 no toasts`, (await count(page, '.toast.is-on')) === 0);
+  check(`${tag} p=0.10 --glitch is 0`, (await cssVar(page, '--glitch')) === 0);
+  check(`${tag} p=0.10 hero copy untouched`, (await text(page, '.hero__lede')) === lede0);
+
+  await seek(page, 0.35);
+  const notes35 = await count(page, '.note.is-on');
+  const glitch35 = await cssVar(page, '--glitch');
+  check(`${tag} p=0.35 at least one note`, notes35 >= 1, `got ${notes35}`);
+  check(`${tag} p=0.35 --glitch > 0`, glitch35 > 0, `got ${glitch35}`);
+
+  await seek(page, 0.55);
+  const notes55 = await count(page, '.note.is-on');
+  check(`${tag} p=0.55 more notes than p=0.35`, notes55 > notes35, `${notes55} vs ${notes35}`);
+  check(`${tag} p=0.55 showcase heading rewritten`, (await text(page, '#showcase h2')) !== showcase0);
+  const glitch55 = await cssVar(page, '--glitch');
+  check(`${tag} p=0.55 --glitch grows`, glitch55 > glitch35, `${glitch55} vs ${glitch35}`);
+
+  await seek(page, 0.75);
+  check(`${tag} p=0.75 at least one toast`, (await count(page, '.toast.is-on')) >= 1);
+  check(`${tag} p=0.75 footer links rewritten`, (await text(page, '.footer__links')) !== footer0);
+  check(`${tag} p=0.75 --glitch grows again`, (await cssVar(page, '--glitch')) > glitch55);
+  check(`${tag} p=0.75 --drift > 0`, (await cssVar(page, '--drift')) > 0);
+
+  // Each note appears in view when its scroll position is reached.
+  const notes = await page.evaluate(() => window.Story.notes.map((n) => n.at));
+  let placed = 0;
+  for (let i = 0; i < notes.length; i++) {
+    await seek(page, notes[i] + 0.003);
+    const ok = await page.evaluate((i) => {
+      const el = document.querySelector(`.note[data-i="${i}"]`);
+      if (!el || !el.classList.contains('is-on')) return false;
+      const r = el.getBoundingClientRect();
+      return r.top >= 0 && r.bottom <= window.innerHeight && r.left >= 0 && r.right <= window.innerWidth;
+    }, i);
+    if (ok) placed++;
+  }
+  check(`${tag} every note lands inside the viewport at its moment`, placed === notes.length, `${placed}/${notes.length}`);
+
+  // Jump straight to the bottom, then back to the top: state follows progress only.
+  await seek(page, 1);
+  await seek(page, 0);
+  check(`${tag} after jump to bottom and back: no notes`, (await count(page, '.note.is-on')) === 0);
+  check(`${tag} after jump to bottom and back: no toasts`, (await count(page, '.toast.is-on')) === 0);
+  check(`${tag} after jump to bottom and back: copy restored`, (await text(page, '.hero__lede')) === lede0 && (await text(page, '#showcase h2')) === showcase0 && (await text(page, '.footer__links')) === footer0);
+  check(`${tag} after jump to bottom and back: effects at rest`, (await cssVar(page, '--glitch')) === 0 && (await cssVar(page, '--drift')) === 0);
+
+  for (const p of [0.35, 0.55, 0.75]) {
+    await seek(page, p);
+    await page.screenshot({ path: path.join(outDir, `act-${String(p).replace('.', '')}-${name}.png`) });
+  }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  check(`${tag} no horizontal overflow through the sweep`, overflow <= 0, `overflow ${overflow}px`);
+  check(`${tag} no console errors through the sweep`, errors.length === 0, errors.join(' | '));
+  await context.close();
+}
+
 await browser.close();
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
