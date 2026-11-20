@@ -11,6 +11,9 @@ Everything the visitor reads or sees change lives in `js/acts.js`:
 - `Story.notes`: the margin notes (`at` is scroll progress, 0 to 1)
 - `Story.toasts`: the fake error toasts
 - `Story.copy`: text that gets rewritten as the site decays
+- `Story.redlines`: red-pen marks drawn over elements (circle, cross, strike, underline)
+- `Story.redactions`: words and names blacked out (the text stays in the page)
+- `Story.eyes`: the watching eyes in the dark (position, size, when they open)
 - The final lines are composed in `js/visitor.js` (`composeLines`)
 
 ## Tests

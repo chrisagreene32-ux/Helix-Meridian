@@ -26,11 +26,10 @@
   // A note sits in the document at the exact scroll position where its moment arrives,
   // so it is in view when `at` is reached and scrolls away naturally afterwards.
   function place() {
-    const de = document.documentElement;
-    const key = de.scrollHeight + 'x' + window.innerHeight;
+    const max = Story.layout.maxScroll();
+    const key = max + 'x' + window.innerHeight;
     if (key === layoutKey) return;
     layoutKey = key;
-    const max = Math.max(0, de.scrollHeight - window.innerHeight);
     Story.notes.forEach((n, i) => {
       els[i].style.top = Math.round(n.at * max + window.innerHeight * 0.3) + 'px';
     });

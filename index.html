@@ -40,8 +40,8 @@
         </h1>
         <p class="hero__lede" data-effect="glitch">The next generation of action role-playing. Arriving 2027 on PC and consoles.</p>
         <div class="hero__actions">
-          <a class="btn btn--solid" href="#showcase">Watch the reveal trailer</a>
-          <a class="btn btn--ghost" href="#signup">Wishlist now</a>
+          <a class="btn btn--solid" href="#showcase" data-react="Watch me.">Watch the reveal trailer</a>
+          <a class="btn btn--ghost" href="#signup" data-react="Obey.">Wishlist now</a>
         </div>
       </div>
     </section>
@@ -150,7 +150,7 @@
         <form class="signup__form" onsubmit="event.preventDefault(); this.classList.add('is-done');">
           <label class="visually-hidden" for="email">Email address</label>
           <input id="email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
-          <button class="btn btn--solid" type="submit">Join the list</button>
+          <button class="btn btn--solid" type="submit" data-react="Join us." data-evade>Join the list</button>
           <p class="signup__done" role="status">You're on the list. We'll be in touch.</p>
         </form>
       </div>
@@ -180,6 +180,13 @@
   <script src="js/effects/copy.js"></script>
   <script src="js/effects/notes.js"></script>
   <script src="js/effects/toasts.js"></script>
+  <script src="js/effects/peel.js"></script>
+  <script src="js/effects/redact.js"></script>
+  <script src="js/effects/redline.js"></script>
+  <script src="js/effects/atmosphere.js"></script>
+  <script src="js/effects/rot.js"></script>
+  <script src="js/effects/eyes.js"></script>
+  <script src="js/effects/reactive.js"></script>
   <script src="js/effects/address.js"></script>
   <script src="js/main.js"></script>
 </body>

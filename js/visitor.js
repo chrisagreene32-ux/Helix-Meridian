@@ -44,7 +44,7 @@
     const lines = [
       'I have been watching you scroll.',
       'You are reading this on a ' + s.viewport.w + ' by ' + s.viewport.h + ' window. I chose that grid.',
-      'You have been here ' + s.seconds + ' seconds.'
+      'You have been here ' + s.seconds + (s.seconds === 1 ? ' second.' : ' seconds.')
     ];
     lines.push(s.fast
       ? 'You moved quickly. People always do, when they are afraid of what they will find.'

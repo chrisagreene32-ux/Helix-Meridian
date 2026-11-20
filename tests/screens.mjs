@@ -57,8 +57,8 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
 // ---- helpers for scroll-driven checks ----
 async function seek(page, p) {
   await page.evaluate((p) => {
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    window.scrollTo({ top: p * max, behavior: 'instant' });
+    // Seek by the engine's own mapping, so seek(p) lands on progress p even while the design has rotted.
+    window.scrollTo({ top: p * window.Story.layout.maxScroll(), behavior: 'instant' });
   }, p);
   await page.waitForTimeout(150);
 }
@@ -241,8 +241,7 @@ for (const [name, vp] of Object.entries(SIZES)) {
   await page.waitForTimeout(250);
   const agree = await page.evaluate(() => {
     const de = document.documentElement;
-    const p = window.Story.engine.progressFrom(window.scrollY, de.scrollHeight, window.innerHeight);
-    return { want: window.Story.engine.resolveAct(p).act.id, got: de.dataset.act };
+    return { want: window.Story.engine.resolveAct(window.Story.layout.progress()).act.id, got: de.dataset.act };
   });
   check('[resize] act is recomputed for the new page height', agree.want === agree.got, JSON.stringify(agree));
   check('[resize] no console errors', errors.length === 0, errors.join(' | '));
@@ -263,6 +262,89 @@ for (const [name, vp] of Object.entries(SIZES)) {
   const after = await snap();
   check('[reload] mid-page reload restores the same act, notes and toasts', JSON.stringify(before) === JSON.stringify(after) && before.act === 'contempt', `${JSON.stringify(before)} vs ${JSON.stringify(after)}`);
   check('[reload] no console errors', errors.length === 0, errors.join(' | '));
+  await context.close();
+}
+
+// ---- Menace: the design itself rots, not just the comments ----
+{
+  const { context, page, errors } = await open(browser, VIEWPORTS.desktop);
+  const cls = (sel, c) => page.evaluate(([s, c]) => !!document.querySelector(s)?.classList.contains(c), [sel, c]);
+  const rootHas = (c) => page.evaluate((c) => document.documentElement.classList.contains(c), c);
+  const atmo = () => cssVar(page, '--atmo');
+  const member0 = await text(page, '.member h3');
+  const cta0 = await text(page, '.nav__cta');
+
+  await seek(page, 0.10);
+  check('[menace] p=0.10 untouched: no peel, atmosphere, redlines, redactions or eyes',
+    !(await rootHas('is-peel-1')) && (await atmo()) === 0 && (await count(page, '.redline.is-on')) === 0 &&
+    (await count(page, '.redact')) === 0 && (await count(page, '.eye.is-on')) === 0);
+  check('[menace] p=0.10 no jaws', (await cssVar(page, '--maw')) === 0);
+
+  await seek(page, 0.30);
+  check('[menace] p=0.30 guides appear (peel 1) but art is intact', (await rootHas('is-peel-1')) && !(await rootHas('is-peel-2')));
+
+  await seek(page, 0.55);
+  check('[menace] p=0.55 wireframe peel: placeholders and default fonts', (await rootHas('is-peel-2')) &&
+    (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--font-display'))).includes('Times'));
+  check('[menace] p=0.55 art panels become crossed-out placeholders', await page.evaluate(() => {
+    const a = document.querySelector('#games .card__art');
+    const cs = getComputedStyle(a);
+    return cs.backgroundImage.includes('linear-gradient') && getComputedStyle(a, '::after').content.includes('PLACEHOLDER');
+  }));
+  const redlines55 = await count(page, '.redline.is-on');
+  check('[menace] p=0.55 red-pen marks are drawn on the layout', redlines55 >= 1, `got ${redlines55}`);
+  check('[menace] p=0.55 every drawn mark has a real path', await page.evaluate(() =>
+    [...document.querySelectorAll('.redline.is-on')].every((s) => (s.querySelector('path')?.getAttribute('d') || '').startsWith('M'))));
+  check('[menace] p=0.55 atmosphere is closing in', (await atmo()) > 0);
+  check('[menace] p=0.55 no eyes yet', (await count(page, '.eye.is-on')) === 0);
+
+  await seek(page, 0.75);
+  check('[menace] p=0.75 raw peel (peel 3)', await rootHas('is-peel-3'));
+  check('[menace] p=0.75 more redlines than p=0.55', (await count(page, '.redline.is-on')) > redlines55);
+  check('[menace] p=0.75 names and words are redacted', (await count(page, '.redact')) >= 1);
+  check('[menace] p=0.75 redacted text is still in the DOM (it is hidden, not deleted)', (await text(page, '.member h3')).length > 0 && (await page.evaluate(() => document.querySelector('.member h3 .redact')?.textContent.length > 0)));
+  check('[menace] p=0.75 jaws are closing in and the logo is an eye', (await cssVar(page, '--maw')) > 0 && (await cls('.nav__mark', 'is-eye')));
+  check('[menace] p=0.75 nav button now says Obey', (await text(page, '.nav__cta')) === 'Obey');
+  check('[menace] p=0.75 something is watching', (await count(page, '.eye.is-on')) >= 1);
+  check('[menace] p=0.75 cursor is no longer a cursor', (await page.evaluate(() => getComputedStyle(document.documentElement).cursor)).includes('url('));
+  check('[menace] p=0.75 atmosphere stronger than p=0.55', (await atmo()) > 0.2);
+
+  // Reactive page: controls rename themselves when approached.
+  const react = await page.evaluate(() => {
+    const b = document.querySelector('.signup__form .btn');
+    const before = b.textContent;
+    b.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+    const during = b.textContent;
+    b.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }));
+    return { before, during, after: b.textContent };
+  });
+  check('[menace] button renames on approach and restores on leave', react.during !== react.before && react.after === react.before, JSON.stringify(react));
+
+  await seek(page, 1);
+  const eyes1 = await count(page, '.eye.is-on');
+  check('[menace] p=1.0 the dark is full of eyes', eyes1 >= 6, `got ${eyes1}`);
+  check('[menace] p=1.0 the jaws have closed in further than at p=0.75', (await cssVar(page, '--maw')) > 0.5);
+  await page.mouse.move(80, 80);
+  await page.waitForTimeout(120);
+  const look1 = await page.evaluate(() => document.querySelector('.eye.is-on').style.getPropertyValue('--px') + '/' + document.querySelector('.eye.is-on').style.getPropertyValue('--py'));
+  await page.mouse.move(1360, 840);
+  await page.waitForTimeout(120);
+  const look2 = await page.evaluate(() => document.querySelector('.eye.is-on').style.getPropertyValue('--px') + '/' + document.querySelector('.eye.is-on').style.getPropertyValue('--py'));
+  check('[menace] eyes follow the cursor', look1 !== look2 && look1 !== '/' && look2 !== '/', `${look1} vs ${look2}`);
+  await page.screenshot({ path: path.join(outDir, 'menace-final-desktop.png') });
+
+  for (const p of [0.30, 0.55, 0.75]) {
+    await seek(page, p);
+    await page.screenshot({ path: path.join(outDir, `menace-${String(p).replace('.', '')}-desktop.png`) });
+  }
+
+  // Everything comes back clean when you return to the top.
+  await seek(page, 0);
+  check('[menace] back at top: every design effect is gone',
+    !(await rootHas('is-peel-1')) && (await atmo()) === 0 && (await count(page, '.redline.is-on')) === 0 &&
+    (await count(page, '.redact')) === 0 && (await count(page, '.eye.is-on')) === 0 && (await cssVar(page, '--maw')) === 0 && !(await cls('.nav__mark', 'is-eye')));
+  check('[menace] back at top: names and nav text restored', (await text(page, '.member h3')) === member0 && (await text(page, '.nav__cta')) === cta0);
+  check('[menace] no console errors', errors.length === 0, errors.join(' | '));
   await context.close();
 }
 

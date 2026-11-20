@@ -79,6 +79,12 @@ test('composeLines includes whole seconds', () => {
   assert.ok(lines.some((l) => l.includes('47')));
 });
 
+test('composeLines says "1 second", not "1 seconds"', () => {
+  const lines = visitor.composeLines({ seconds: 1, avgSpeed: 10, backScrolls: 0, viewport: VP, fast: false });
+  assert.ok(lines.some((l) => l.includes('1 second.')));
+  assert.ok(!lines.some((l) => l.includes('1 seconds')));
+});
+
 test('composeLines omits back-scroll line when none, includes when present', () => {
   const base = { seconds: 5, avgSpeed: 10, viewport: VP, fast: false };
   const none = visitor.composeLines({ ...base, backScrolls: 0 });
