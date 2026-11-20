@@ -249,6 +249,23 @@ for (const [name, vp] of Object.entries(SIZES)) {
   await context.close();
 }
 
+{
+  const { context, page, errors } = await open(browser, VIEWPORTS.desktop);
+  await seek(page, 0.72);
+  const snap = () => page.evaluate(() => ({
+    act: document.documentElement.dataset.act,
+    notes: document.querySelectorAll('.note.is-on').length,
+    toasts: document.querySelectorAll('.toast.is-on').length
+  }));
+  const before = await snap();
+  await page.reload();
+  await page.waitForTimeout(500);
+  const after = await snap();
+  check('[reload] mid-page reload restores the same act, notes and toasts', JSON.stringify(before) === JSON.stringify(after) && before.act === 'contempt', `${JSON.stringify(before)} vs ${JSON.stringify(after)}`);
+  check('[reload] no console errors', errors.length === 0, errors.join(' | '));
+  await context.close();
+}
+
 await browser.close();
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
