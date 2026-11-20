@@ -323,4 +323,6 @@ section { position: relative; padding-block: var(--section); }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .curtain { animation: none; }
+  .is-glitching [data-effect~=glitch] { animation: none; }
+  .note, .address p { transition-duration: 0.01s; }
 }

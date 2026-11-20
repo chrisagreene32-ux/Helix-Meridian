@@ -14,7 +14,10 @@
   }
 
   Story.effects.glitch = {
-    apply(intensity) { set(Math.round(intensity * 1000) / 1000); },
+    apply(intensity) {
+      const capped = Story.motion.reduced ? Math.min(intensity, 0.4) : intensity;
+      set(Math.round(capped * 1000) / 1000);
+    },
     reset() { set(0); }
   };
 })(window);

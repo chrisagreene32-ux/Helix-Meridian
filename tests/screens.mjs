@@ -179,6 +179,76 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await context.close();
 }
 
+// ---- Task 6: responsive, reduced motion, no-JS, resize ----
+const SWEEP = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+const SIZES = { phone: { width: 390, height: 844 }, tablet: { width: 820, height: 1180 }, desktop: { width: 1440, height: 900 } };
+
+for (const [name, vp] of Object.entries(SIZES)) {
+  const { context, page, errors } = await open(browser, vp);
+  let worst = 0;
+  for (const p of SWEEP) {
+    await seek(page, p);
+    worst = Math.max(worst, await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth));
+  }
+  check(`[${name}] full sweep: no horizontal overflow`, worst <= 0, `worst ${worst}px`);
+  check(`[${name}] full sweep: no console errors`, errors.length === 0, errors.join(' | '));
+  await context.close();
+}
+
+{
+  const { context, page, errors } = await open(browser, VIEWPORTS.desktop, { reducedMotion: 'reduce' });
+  check('[reduced] Story.motion.reduced is true', await page.evaluate(() => window.Story.motion.reduced === true));
+  let fast = [];
+  let inverted = 0;
+  let maxGlitch = 0;
+  for (const p of SWEEP) {
+    await seek(page, p);
+    fast = fast.concat(await page.evaluate(() => {
+      const bad = [];
+      document.querySelectorAll('*').forEach((el) => {
+        const cs = getComputedStyle(el);
+        if (cs.animationName === 'none') return;
+        const durs = cs.animationDuration.split(',').map((d) => (d.trim().endsWith('ms') ? parseFloat(d) : parseFloat(d) * 1000));
+        if (durs.some((d) => d < 400) || cs.animationTimingFunction.includes('steps')) bad.push(el.className || el.tagName);
+      });
+      return bad;
+    }));
+    inverted += await count(page, '.is-inverted');
+    maxGlitch = Math.max(maxGlitch, await cssVar(page, '--glitch'));
+  }
+  check('[reduced] no rapid or stepped animations anywhere', fast.length === 0, [...new Set(fast)].join(', '));
+  check('[reduced] no inverted-flash sections', inverted === 0, `${inverted}`);
+  check('[reduced] glitch strength is capped', maxGlitch <= 0.4, `max ${maxGlitch}`);
+  check('[reduced] still tells the story (notes at 0.55)', await (async () => { await seek(page, 0.55); return (await count(page, '.note.is-on')) >= 1; })());
+  check('[reduced] still ends with the address', await (async () => { await seek(page, 1); return (await text(page, '#address')).includes(' by '); })());
+  check('[reduced] no console errors', errors.length === 0, errors.join(' | '));
+  await context.close();
+}
+
+{
+  const { context, page, errors } = await open(browser, VIEWPORTS.desktop, { javaScriptEnabled: false });
+  for (const sel of SECTIONS) check(`[no-js] ${sel} renders`, (await page.locator(sel).isVisible()));
+  check('[no-js] hero shows the clean copy', (await text(page, '.hero__lede')).includes('next generation of action role-playing'));
+  check('[no-js] no notes or toasts exist', (await count(page, '.note, .toast, #address')) === 0);
+  check('[no-js] no console errors', errors.length === 0, errors.join(' | '));
+  await context.close();
+}
+
+{
+  const { context, page, errors } = await open(browser, VIEWPORTS.desktop);
+  await seek(page, 0.55);
+  await page.setViewportSize(VIEWPORTS.mobile);
+  await page.waitForTimeout(250);
+  const agree = await page.evaluate(() => {
+    const de = document.documentElement;
+    const p = window.Story.engine.progressFrom(window.scrollY, de.scrollHeight, window.innerHeight);
+    return { want: window.Story.engine.resolveAct(p).act.id, got: de.dataset.act };
+  });
+  check('[resize] act is recomputed for the new page height', agree.want === agree.got, JSON.stringify(agree));
+  check('[resize] no console errors', errors.length === 0, errors.join(' | '));
+  await context.close();
+}
+
 await browser.close();
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

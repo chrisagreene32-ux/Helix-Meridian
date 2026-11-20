@@ -15,12 +15,18 @@
     const progress = S.engine.progressFrom(root.scrollY, de.scrollHeight, root.innerHeight);
     const { act, local } = S.engine.resolveAct(progress);
     const ctx = { act, local, progress, snapshot };
+    de.dataset.act = act.id;
     for (const name of NAMES) {
       const fx = S.effects[name];
       if (!fx) continue;
       const cfg = act.effects[name];
-      if (cfg === undefined) { fx.reset(); continue; }
-      fx.apply(Array.isArray(cfg) ? lerp(cfg[0], cfg[1], local) : cfg, ctx);
+      try {
+        if (cfg === undefined) { fx.reset(); continue; }
+        fx.apply(Array.isArray(cfg) ? lerp(cfg[0], cfg[1], local) : cfg, ctx);
+      } catch (err) {
+        // One broken effect must not take the others (or the page) down with it.
+        console.error('effect failed:', name, err);
+      }
     }
   }
 

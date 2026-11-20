@@ -33,10 +33,13 @@
   Story.effects.drift = {
     apply(intensity, ctx) {
       seed();
+      const reduced = Story.motion.reduced;
       const contempt = ctx.act.id === 'contempt';
       const late = contempt || ctx.act.id === 'address';
-      set(Math.round(intensity * 1000) / 1000, contempt ? Math.round(ctx.local * 1000) / 1000 : late ? 1 : 0);
-      setInverted(late && (!contempt || ctx.local > 0.35));
+      const strength = reduced ? Math.min(intensity, 0.5) : intensity;
+      set(Math.round(strength * 1000) / 1000, contempt ? Math.round(ctx.local * 1000) / 1000 : late ? 1 : 0);
+      // A sudden full-section colour inversion reads as a flash, so reduced motion skips it.
+      setInverted(!reduced && late && (!contempt || ctx.local > 0.35));
     },
     reset() { set(0, 0); setInverted(false); }
   };
